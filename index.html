@@ -1,0 +1,1782 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FitMenu Pro - Planificateur de Repas Sportif</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+        * { font-family: 'Inter', sans-serif; box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
+
+        body {
+            background: #f5f7fa;
+            color: #1f2937;
+            transition: background 0.3s, color 0.3s;
+        }
+        body.dark-mode {
+            background: #0f172a;
+            color: #e2e8f0;
+        }
+
+        /* Gradient Header */
+        .gradient-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .gradient-orange { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
+        .gradient-green { background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); }
+
+        /* Cards */
+        .card {
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 16px;
+            transition: all 0.3s ease;
+        }
+        body.dark-mode .card {
+            background: #1e293b;
+            border-color: #334155;
+        }
+
+        .card-hover { cursor: pointer; }
+        .card-hover:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 25px -5px rgba(102, 126, 234, 0.15);
+        }
+
+        /* Buttons */
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 4px 6px -1px rgba(102, 126, 234, 0.3);
+        }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(102, 126, 234, 0.4); }
+
+        .btn-ghost {
+            background: white;
+            border: 2px solid #667eea;
+            color: #667eea;
+            transition: all 0.3s;
+        }
+        .btn-ghost:hover { background: #eef2ff; }
+        body.dark-mode .btn-ghost {
+            background: #1e293b;
+            color: #a5b4fc;
+        }
+
+        /* Tabs */
+        .tab {
+            transition: all 0.3s;
+            border: 2px solid transparent;
+        }
+        .tab-active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-color: transparent;
+            box-shadow: 0 4px 6px -1px rgba(102, 126, 234, 0.4);
+        }
+
+        /* Filter tags */
+        .filter-tag { transition: all 0.3s; cursor: pointer; }
+        .filter-tag.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white !important;
+            border-color: transparent !important;
+        }
+        .filter-tag.inactive { opacity: 0.45; }
+        .filter-tag.inactive:hover { opacity: 0.8; }
+
+        /* Meal cards */
+        .meal-card { position: relative; overflow: hidden; transition: all 0.3s; }
+        .meal-card::before { content: ''; position: absolute; top: 0; left: 0; width: 4px; height: 100%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .meal-card:hover { transform: translateY(-2px); }
+
+        /* Modals */
+        .modal {
+            display: none;
+            position: fixed; z-index: 1000;
+            left: 0; top: 0; width: 100%; height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            animation: fadeIn 0.3s;
+        }
+        .modal.active { display: flex; align-items: center; justify-content: center; padding: 1rem; }
+        .modal-content {
+            background: white;
+            border-radius: 20px;
+            padding: 2rem;
+            max-width: 720px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            animation: slideUp 0.3s;
+        }
+        body.dark-mode .modal-content { background: #1e293b; color: #e2e8f0; }
+
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slideUp { from { transform: translateY(50px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+        /* Toasts */
+        .toast {
+            position: fixed; bottom: 20px; right: 20px;
+            padding: 16px 24px; border-radius: 12px;
+            color: white; font-weight: 500; z-index: 2000;
+            animation: slideIn 0.3s ease-out;
+            max-width: 350px;
+        }
+        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        .toast.success { background: linear-gradient(135deg, #10b981, #059669); }
+        .toast.info { background: linear-gradient(135deg, #667eea, #764ba2); }
+        .toast.warning { background: linear-gradient(135deg, #f59e0b, #d97706); }
+
+        /* Progress bars */
+        .progress-track { background: #e5e7eb; height: 10px; border-radius: 9999px; overflow: hidden; }
+        body.dark-mode .progress-track { background: #334155; }
+        .progress-bar { height: 100%; border-radius: 9999px; transition: width 0.6s ease; }
+
+        /* Recipe steps */
+        .recipe-step { border-left: 3px solid #667eea; }
+
+        /* Inputs */
+        .form-input {
+            width: 100%;
+            padding: 0.6rem 0.8rem;
+            border: 2px solid #e5e7eb;
+            border-radius: 10px;
+            background: #f9fafb;
+            transition: all 0.3s;
+            font-weight: 500;
+        }
+        .form-input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+            background: white;
+        }
+        body.dark-mode .form-input {
+            background: #1e293b;
+            border-color: #475569;
+            color: #e2e8f0;
+        }
+        .form-label { display: block; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #6b7280; margin-bottom: 0.35rem; }
+        body.dark-mode .form-label { color: #94a3b8; }
+
+        /* Stat tiles */
+        .stat-tile { padding: 1rem; border-radius: 12px; text-align: center; transition: all 0.3s; }
+        .stat-tile:hover { transform: translateY(-2px); }
+
+        /* Favorites */
+        .favorite-btn { transition: all 0.3s; }
+        .favorite-btn:hover { transform: scale(1.2); }
+        .favorite-btn.active { color: #ef4444; }
+
+        /* Saved menu cards */
+        .saved-menu-card { transition: all 0.3s; }
+        .saved-menu-card:hover { border-color: #667eea !important; box-shadow: 0 4px 6px -1px rgba(102, 126, 234, 0.2); }
+
+        /* Preference toggles */
+        .preference-toggle { transition: all 0.3s; cursor: pointer; }
+        .preference-toggle:hover { transform: translateY(-2px); }
+        .preference-toggle.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white; border-color: transparent;
+            box-shadow: 0 4px 6px -1px rgba(102, 126, 234, 0.3);
+        }
+        body.dark-mode .preference-toggle { border-color: #475569; }
+
+        /* Activity & goal selectors */
+        .activity-btn, .goal-btn { transition: all 0.3s; cursor: pointer; border-color: #e5e7eb; background: white; color: #1f2937; }
+        body.dark-mode .activity-btn, body.dark-mode .goal-btn { background: #1e293b; border-color: #475569; color: #cbd5e1; }
+        .activity-btn.active, .goal-btn.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white !important; border-color: transparent;
+            box-shadow: 0 4px 6px -1px rgba(102, 126, 234, 0.3);
+        }
+        body.dark-mode .activity-btn.active, body.dark-mode .goal-btn.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+            color: white !important;
+            border-color: transparent !important;
+            box-shadow: 0 4px 6px -1px rgba(102, 126, 234, 0.5) !important;
+        }
+
+        /* Input number arrows hidden */
+        input[type=number]::-webkit-inner-spin-button,
+        input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        input[type=number] { -moz-appearance: textfield; }
+
+        .fade-in { animation: fadeIn 0.4s ease-out; }
+
+        /* ============================
+           DARK MODE – overrides complets
+           ============================ */
+
+        /* Day card headings */
+        body.dark-mode .text-purple-600 { color: #c084fc !important; }
+        body.dark-mode .text-green-600  { color: #4ade80 !important; }
+        body.dark-mode .text-orange-500 { color: #fb923c !important; }
+        body.dark-mode .text-yellow-500 { color: #facc15 !important; }
+        body.dark-mode .text-red-500    { color: #f87171 !important; }
+        body.dark-mode .text-red-400    { color: #fca5a5 !important; }
+        body.dark-mode .text-slate-500  { color: #94a3b8 !important; }
+        body.dark-mode .text-slate-400  { color: #a1a1aa !important; }
+        body.dark-mode .text-gray-400   { color: #9ca3af !important; }
+        body.dark-mode .text-gray-500   { color: #9ca3af !important; }
+
+        /* Meal card backgrounds — slightly tinted dark */
+        body.dark-mode .meal-card.bg-blue-50   { background: #1e293b !important; border: 1px solid #334155; }
+        body.dark-mode .meal-card.bg-green-50  { background: #1a2e1a !important; border: 1px solid #2d4a2d; }
+        body.dark-mode .meal-card.bg-purple-50 { background: #251a3e !important; border: 1px solid #3b2d5c; }
+        body.dark-mode .meal-card.bg-pink-50   { background: #2d1a25 !important; border: 1px solid #4a2d3b; }
+
+        /* Meal card text */
+        body.dark-mode .meal-card p,
+        body.dark-mode .meal-card span {
+            color: #e2e8f0 !important;
+        }
+        body.dark-mode .meal-card .text-slate-500 { color: #94a3b8 !important; }
+        body.dark-mode .meal-card .text-gray-400  { color: #9ca3af !important; }
+
+        /* Filter tags */
+        body.dark-mode .filter-tag {
+            border-color: #475569 !important;
+            color: #cbd5e1 !important;
+        }
+        body.dark-mode .filter-tag.active {
+            color: white !important;
+        }
+        body.dark-mode .filter-tag.text-purple-600 { color: #c084fc !important; border-color: #c084fc !important; }
+        body.dark-mode .filter-tag.text-green-600  { color: #4ade80 !important; border-color: #4ade80 !important; }
+        body.dark-mode .filter-tag.text-yellow-600 { color: #facc15 !important; border-color: #facc15 !important; }
+        body.dark-mode .filter-tag.text-blue-600   { color: #60a5fa !important; border-color: #60a5fa !important; }
+        body.dark-mode .filter-tag.text-red-600    { color: #f87171 !important; border-color: #f87171 !important; }
+        body.dark-mode .filter-tag.text-pink-600   { color: #f472b6 !important; border-color: #f472b6 !important; }
+        body.dark-mode .filter-tag.text-orange-600 { color: #fb923c !important; border-color: #fb923c !important; }
+        body.dark-mode .filter-tag.text-purple-400 { color: #c084fc !important; border-color: #c084fc !important; }
+
+        /* Tabs */
+        body.dark-mode .tab.tab-active { color: white !important; }
+        body.dark-mode .tab:not(.tab-active) {
+            background: #1e293b !important;
+            color: #94a3b8 !important;
+            border-color: #334155;
+        }
+
+        /* Fiber stat green text */
+        body.dark-mode #stat-fiber { color: #4ade80 !important; }
+
+        /* Fiber warning card */
+        body.dark-mode .fiber-warning-card { background: #422006 !important; border-color: #b45309 !important; }
+
+        /* Toast text */
+        body.dark-mode .toast { color: white !important; }
+
+        /* Recipe modal text — mode clair: noir/gris très foncé */
+        .modal-content h3 { color: #111827 !important; }
+        .modal-content p  { color: #1f2937 !important; }
+        .modal-content span { color: #1f2937 !important; }
+        .modal-content li { color: #1f2937 !important; }
+        .modal-content .text-slate-500 { color: #374151 !important; }
+        .modal-content .text-slate-600 { color: #1f2937 !important; }
+
+        /* Recipe modal text — mode sombre */
+        body.dark-mode .modal-content h3 { color: #e2e8f0 !important; }
+        body.dark-mode .modal-content p  { color: #cbd5e1 !important; }
+        body.dark-mode .modal-content span { color: #cbd5e1 !important; }
+        body.dark-mode .modal-content li { color: #cbd5e1 !important; }
+        body.dark-mode .modal-content .text-slate-500 { color: #94a3b8 !important; }
+        body.dark-mode .modal-content .text-slate-600 { color: #94a3b8 !important; }
+
+        /* Welcome screen */
+        body.dark-mode #welcome-screen .card {
+            background: #1e293b !important;
+            border-color: #334155;
+        }
+        body.dark-mode #welcome-screen .text-slate-500 { color: #94a3b8 !important; }
+
+        /* Saved menu cards */
+        body.dark-mode .saved-menu-card {
+            background: #1e293b;
+            border-color: #334155;
+            color: #e2e8f0;
+        }
+
+        /* Shopping list items */
+        body.dark-mode .bg-green-50 { background: #1a2e1a !important; }
+        body.dark-mode .bg-red-50   { background: #2d1a1a !important; }
+
+        /* Shopping list check */
+        body.dark-mode li {
+            color: #e2e8f0 !important;
+        }
+        body.dark-mode li.text-green-700 {
+            color: #4ade80 !important;
+        }
+        body.dark-mode li.text-gray-500 {
+            color: #9ca3af !important;
+        }
+
+        /* Remove bg-blue-50/green-50/purple-50/pink-50 from non-meal-card elements */
+        body.dark-mode .bg-blue-50:not(.meal-card)   { background: #1e293b !important; }
+        body.dark-mode .bg-green-50:not(.meal-card)  { background: #1a2e1a !important; }
+        body.dark-mode .bg-purple-50:not(.meal-card) { background: #251a3e !important; }
+        body.dark-mode .bg-pink-50:not(.meal-card)   { background: #2d1a25 !important; }
+
+        /* Generic: ensure all text in .card is readable */
+        body.dark-mode .card { color: #e2e8f0; }
+        body.dark-mode .card .text-slate-400 { color: #94a3b8 !important; }
+        body.dark-mode .card .text-slate-500 { color: #94a3b8 !important; }
+        body.dark-mode .card .text-slate-600 { color: #cbd5e1 !important; }
+        body.dark-mode .card p  { color: #cbd5e1; }
+        body.dark-mode .card h3 { color: #e2e8f0; }
+
+        /* Icons in cards that use text-* colors */
+        body.dark-mode .card i.text-orange-500 { color: #fb923c !important; }
+        body.dark-mode .card i.text-green-500  { color: #4ade80 !important; }
+
+        /* Buttons inside dark cards */
+        body.dark-mode .card button:not(.btn-primary):not(.tab-active) {
+            color: #cbd5e1;
+        }
+
+        /* Profile modal extra elements */
+        body.dark-mode .stat-tile { background: #0f172a; color: #e2e8f0; }
+        body.dark-mode .text-slate-600 { color: #94a3b8 !important; }
+
+        /* Section titles */
+        body.dark-mode h3 { color: #f1f5f9; }
+        body.dark-mode h2 { color: #f1f5f9; }
+
+        /* Fiber boost btn */
+        body.dark-mode .bg-green-500 { background: #22c55e !important; color: white !important; }
+    </style>
+</head>
+<body class="min-h-screen">
+
+    <!-- ========== HEADER ========== -->
+    <header class="gradient-bg text-white shadow-lg">
+        <div class="container mx-auto px-4 py-5">
+            <div class="flex items-center justify-between flex-wrap gap-3">
+                <div class="flex items-center gap-3">
+                    <div class="bg-white/20 rounded-xl w-11 h-11 flex items-center justify-center">
+                        <i class="fas fa-dumbbell text-xl"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-2xl font-bold leading-tight">FitMenu <span class="text-xs align-top bg-white/20 px-2 py-0.5 rounded-full">PRO</span></h1>
+                        <p class="text-xs opacity-90 hidden sm:block">Planifiez vos repas comme un athlète</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button id="btn-profile" class="bg-white/20 hover:bg-white/30 p-2.5 rounded-lg transition-all" title="Mon profil">
+                        <i class="fas fa-user"></i>
+                    </button>
+                    <button id="btn-dark-mode" class="bg-white/20 hover:bg-white/30 p-2.5 rounded-lg transition-all" title="Mode sombre">
+                        <i id="dark-mode-icon" class="fas fa-moon"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="container mx-auto px-4 py-6 max-w-5xl">
+
+        <!-- ========== BANDEAU TDEE ========== -->
+        <div id="tdee-banner" class="card card-hover p-5 mb-6 hidden fade-in">
+            <div class="flex items-center justify-between flex-wrap gap-4">
+                <div class="flex items-center gap-4">
+                    <div class="gradient-orange rounded-xl w-12 h-12 flex items-center justify-center text-white text-xl">
+                        <i class="fas fa-fire"></i>
+                    </div>
+                    <div>
+                        <p class="text-xs font-semibold uppercase tracking-wide text-slate-400">Objectif calorique</p>
+                        <p class="text-2xl font-extrabold" id="tdee-total">—</p>
+                        <p class="text-xs text-slate-500" id="tdee-detail">Configurez votre profil</p>
+                    </div>
+                </div>
+                <div class="flex gap-6 flex-wrap">
+                    <div class="text-center min-w-20">
+                        <p class="text-lg font-bold" id="stat-protein">—</p>
+                        <p class="text-xs text-slate-400">Protéines</p>
+                    </div>
+                    <div class="text-center min-w-20">
+                        <p class="text-lg font-bold" id="stat-carbs">—</p>
+                        <p class="text-xs text-slate-400">Glucides</p>
+                    </div>
+                    <div class="text-center min-w-20">
+                        <p class="text-lg font-bold" id="stat-fat">—</p>
+                        <p class="text-xs text-slate-400">Lipides</p>
+                    </div>
+                    <div class="text-center min-w-20">
+                        <p class="text-lg font-bold" style="color:#22c55e" id="stat-fiber">—</p>
+                        <p class="text-xs text-slate-400">Fibres</p>
+                    </div>
+                </div>
+                <button id="btn-config-profile" class="btn-primary text-white px-5 py-2.5 rounded-xl font-semibold text-sm">
+                    <i class="fas fa-sliders-h mr-2"></i>Configurer
+                </button>
+            </div>
+        </div>
+
+        <!-- ========== PREMIÈRE VISITE : ÉCRAN DE BIENVENUE ========== -->
+        <div id="welcome-screen" class="min-h-[60vh] flex items-center justify-center fade-in">
+            <div class="card p-8 max-w-2xl w-full text-center">
+                <div class="gradient-bg mx-auto rounded-2xl w-20 h-20 flex items-center justify-center text-white text-4xl mb-6 shadow-lg">
+                    <i class="fas fa-dumbbell"></i>
+                </div>
+                <h2 class="text-3xl font-extrabold mb-3">Bienvenue sur FitMenu Pro</h2>
+                <p class="text-slate-500 dark:text-slate-400 mb-8 max-w-lg mx-auto">
+                    Pour générer un menu adapté à votre corps et vos objectifs, commençons par calculer votre métabolisme (TDEE).
+                    Seulement 30 secondes, et vos calories seront calibrées scientifiquement.
+                </p>
+                <button id="btn-start-profile" class="btn-primary text-white px-8 py-4 rounded-xl font-bold text-lg">
+                    <i class="fas fa-play mr-2"></i>Calculer mon profil
+                </button>
+            </div>
+        </div>
+
+        <!-- ========== CONTENU PRINCIPAL ========== -->
+        <div id="main-app" class="hidden">
+            <!-- Tabs -->
+            <div class="flex flex-wrap gap-2 mb-6">
+                <button id="tab-menu" class="tab tab-active px-5 py-2.5 rounded-xl font-semibold">
+                    <i class="fas fa-calendar-week mr-2"></i>Menu
+                </button>
+                <button id="tab-recipes" class="tab card px-5 py-2.5 rounded-xl font-semibold">
+                    <i class="fas fa-utensils mr-2"></i>Recettes
+                </button>
+                <button id="tab-shopping" class="tab card px-5 py-2.5 rounded-xl font-semibold">
+                    <i class="fas fa-shopping-cart mr-2"></i>Courses
+                </button>
+                <button id="tab-saved" class="tab card px-5 py-2.5 rounded-xl font-semibold">
+                    <i class="fas fa-bookmark mr-2"></i>Menus
+                </button>
+            </div>
+
+            <!-- Week navigation -->
+            <div class="card p-4 mb-6 flex items-center justify-between">
+                <button id="btn-prev-week" class="btn-ghost px-4 py-2 rounded-xl font-semibold text-sm">
+                    <i class="fas fa-chevron-left mr-2"></i>Précédent
+                </button>
+                <div class="text-center">
+                    <p class="font-bold text-lg" id="week-range">Semaine</p>
+                    <p class="text-sm text-slate-500" id="week-number">Semaine 1</p>
+                </div>
+                <button id="btn-next-week" class="btn-ghost px-4 py-2 rounded-xl font-semibold text-sm">
+                    Suivant<i class="fas fa-chevron-right ml-2"></i>
+                </button>
+            </div>
+
+            <!-- Filters -->
+            <div class="card p-4 mb-6">
+                <h3 class="font-bold mb-3">
+                    <i class="fas fa-filter text-purple-600 mr-2"></i>Filtres alimentaires
+                </h3>
+                <div class="flex flex-wrap gap-2" id="filters-container">
+                    <button class="filter-tag active px-4 py-2 rounded-full text-sm font-medium border-2 border-purple-600 text-purple-600" data-filter="all">🍽️ Tous</button>
+                    <button class="filter-tag px-4 py-2 rounded-full text-sm font-medium border-2 border-green-500 text-green-600" data-filter="vegetarian">🥬 Végétarien</button>
+                    <button class="filter-tag px-4 py-2 rounded-full text-sm font-medium border-2 border-yellow-500 text-yellow-600" data-filter="glutenFree">🌾 Sans gluten</button>
+                    <button class="filter-tag px-4 py-2 rounded-full text-sm font-medium border-2 border-blue-500 text-blue-600" data-filter="dairyFree">🥛 Sans lactose</button>
+                    <button class="filter-tag px-4 py-2 rounded-full text-sm font-medium border-2 border-red-500 text-red-600" data-filter="highProtein">💪 Riche en protéines</button>
+                    <button class="filter-tag px-4 py-2 rounded-full text-sm font-medium border-2 border-pink-500 text-pink-600" data-filter="lowCalorie">🔥 Faible en calories</button>
+                    <button class="filter-tag px-4 py-2 rounded-full text-sm font-medium border-2 border-orange-500 text-orange-600" data-filter="quick">⚡ Rapide (&lt;20 min)</button>
+                    <button class="filter-tag px-4 py-2 rounded-full text-sm font-medium border-2 border-purple-400 text-purple-400" data-filter="highFiber">🌿 Riche en fibres</button>
+                </div>
+            </div>
+
+            <!-- Action buttons -->
+            <div class="flex flex-wrap gap-3 mb-6">
+                <button id="btn-regenerate" class="btn-primary text-white px-6 py-3 rounded-xl font-semibold">
+                    <i class="fas fa-sync-alt mr-2"></i>Régénérer le Menu
+                </button>
+                <button id="btn-save" class="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-6 py-3 rounded-xl font-semibold hover:shadow-lg transition-all">
+                    <i class="fas fa-save mr-2"></i>Sauvegarder
+                </button>
+                <button id="btn-prefs" class="btn-ghost px-6 py-3 rounded-xl font-semibold">
+                    <i class="fas fa-sliders-h mr-2"></i>Préférences
+                </button>
+                <button id="btn-pdf" class="btn-ghost px-6 py-3 rounded-xl font-semibold">
+                    <i class="fas fa-file-pdf mr-2"></i>PDF
+                </button>
+                <button id="btn-copy" class="btn-ghost px-6 py-3 rounded-xl font-semibold">
+                    <i class="fas fa-copy mr-2"></i>Copier
+                </button>
+            </div>
+
+            <!-- ========== TAB MENU ========== -->
+            <div id="content-menu" class="tab-content fade-in">
+                <div class="card p-6 mb-6">
+                    <h3 class="text-lg font-bold mb-4">
+                        <i class="fas fa-chart-pie text-purple-600 mr-2"></i>Moyennes Quotidiennes
+                        <span class="text-xs font-normal text-slate-400 ml-2">(objectifs: <span id="targets-label">—</span>)</span>
+                    </h3>
+                    <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+                        <div>
+                            <div class="flex justify-between text-sm mb-1">
+                                <span class="text-slate-500">Calories</span>
+                                <span id="cal-progress" class="font-bold text-orange-600">0</span>
+                            </div>
+                            <div class="progress-track">
+                                <div id="cal-bar" class="progress-bar bg-orange-500" style="width: 0%"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="flex justify-between text-sm mb-1">
+                                <span class="text-slate-500">Protéines</span>
+                                <span id="prot-progress" class="font-bold text-red-600">0</span>
+                            </div>
+                            <div class="progress-track">
+                                <div id="prot-bar" class="progress-bar bg-red-500" style="width: 0%"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="flex justify-between text-sm mb-1">
+                                <span class="text-slate-500">Glucides</span>
+                                <span id="carb-progress" class="font-bold text-blue-600">0</span>
+                            </div>
+                            <div class="progress-track">
+                                <div id="carb-bar" class="progress-bar bg-blue-500" style="width: 0%"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="flex justify-between text-sm mb-1">
+                                <span class="text-slate-500">Lipides</span>
+                                <span id="fat-progress" class="font-bold text-yellow-600">0</span>
+                            </div>
+                            <div class="progress-track">
+                                <div id="fat-bar" class="progress-bar bg-yellow-500" style="width: 0%"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="flex justify-between text-sm mb-1">
+                                <span class="text-slate-500">Fibres</span>
+                                <span id="fiber-progress" class="font-bold text-green-600">0</span>
+                            </div>
+                            <div class="progress-track">
+                                <div id="fiber-bar" class="progress-bar bg-green-500" style="width: 0%"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="fiber-warning" class="hidden mt-3 text-sm text-amber-600 bg-amber-50 border border-amber-200 rounded-lg p-3">
+                        <i class="fas fa-exclamation-triangle mr-2"></i><strong>Attention fibres :</strong> votre menu est sous la recommandation (30-40g/jour). <button class="underline font-semibold" id="btn-fiber-fix">Régénérer avec plus de fibres</button>
+                    </div>
+                </div>
+
+                <div class="card p-6 mb-6">
+                    <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
+                        <h2 class="text-xl font-bold">
+                            <i class="fas fa-calendar-alt text-purple-600 mr-2"></i>Menu de la Semaine
+                        </h2>
+                        <div class="text-xs text-slate-500">
+                            <i class="fas fa-info-circle mr-1"></i>Cliquez sur un plat pour voir la recette
+                        </div>
+                    </div>
+                    <div id="menu-container" class="space-y-4"></div>
+                </div>
+            </div>
+
+            <!-- ========== TAB RECETTES ========== -->
+            <div id="content-recipes" class="tab-content hidden fade-in">
+                <div class="card p-6">
+                    <div class="flex items-center justify-between mb-6 flex-wrap gap-3">
+                        <h2 class="text-xl font-bold">
+                            <i class="fas fa-book-open text-purple-600 mr-2"></i>Recettes Détaillées
+                        </h2>
+                        <input id="recipe-search" type="text" placeholder="🔍 Rechercher une recette..."
+                               class="form-input max-w-xs">
+                    </div>
+                    <div id="recipes-container" class="space-y-6"></div>
+                </div>
+            </div>
+
+            <!-- ========== TAB COURSES ========== -->
+            <div id="content-shopping" class="tab-content hidden fade-in">
+                <div class="card p-6">
+                    <div class="flex items-center justify-between mb-6">
+                        <h2 class="text-xl font-bold">
+                            <i class="fas fa-shopping-basket text-purple-600 mr-2"></i>Liste de Courses
+                        </h2>
+                        <div class="text-lg font-semibold text-green-600">
+                            <i class="fas fa-dollar-sign mr-1"></i>
+                            <span id="total-cost">0.00</span> CAD
+                        </div>
+                    </div>
+                    <div class="bg-blue-50 border-l-4 border-blue-500 p-4 mb-6 rounded-r-lg">
+                        <p class="text-sm text-blue-700">
+                            <i class="fas fa-info-circle mr-2"></i>
+                            <strong>Astuce :</strong> Cliquez sur le <span class="text-red-500">✕</span> pour supprimer les ingrédients que vous avez déjà.
+                        </p>
+                    </div>
+                    <div id="shopping-container" class="space-y-4"></div>
+                </div>
+            </div>
+
+            <!-- ========== TAB MENUS SAUVEGARDÉS ========== -->
+            <div id="content-saved" class="tab-content hidden fade-in">
+                <div class="card p-6">
+                    <h2 class="text-xl font-bold mb-6">
+                        <i class="fas fa-bookmark text-purple-600 mr-2"></i>Mes Menus Sauvegardés
+                    </h2>
+                    <div id="saved-menus-container" class="space-y-4"></div>
+                </div>
+            </div>
+        </div>
+
+        <footer class="mt-12 py-6 text-center">
+            <p class="text-sm text-slate-500">
+                <i class="fas fa-heart text-red-500 mr-1"></i>
+                FitMenu Pro - Planifiez, cuisinez, performez
+            </p>
+            <p class="text-xs mt-2 text-slate-400">Calories basées sur votre TDEE (Total Daily Energy Expenditure)</p>
+        </footer>
+    </div>
+
+    <!-- ========== MODAL PROFIL / TDEE ========== -->
+    <div id="profile-modal" class="modal">
+        <div class="modal-content">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold">
+                    <i class="fas fa-user-cog text-purple-600 mr-2"></i>Mon Profil Nutritionnel
+                </h2>
+                <button id="btn-close-profile" class="text-slate-400 hover:text-slate-600 text-2xl">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
+                <div>
+                    <label class="form-label">Sexe</label>
+                    <select id="profile-sex" class="form-input">
+                        <option value="male">Homme</option>
+                        <option value="female">Femme</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="form-label">Âge</label>
+                    <input id="profile-age" type="number" class="form-input" min="15" max="80" placeholder="ex: 28" value="28">
+                </div>
+                <div>
+                    <label class="form-label">Taille (cm)</label>
+                    <input id="profile-height" type="number" class="form-input" min="140" max="220" placeholder="ex: 178" value="178">
+                </div>
+                <div>
+                    <label class="form-label">Poids (kg)</label>
+                    <input id="profile-weight" type="number" class="form-input" min="40" max="200" placeholder="ex: 75" value="75">
+                </div>
+            </div>
+
+            <div class="mb-5">
+                <label class="form-label">Fréquence d'entraînement</label>
+                <div class="grid grid-cols-2 md:grid-cols-3 gap-2" id="activity-container">
+                    <button class="activity-btn px-3 py-2.5 rounded-lg border-2 text-sm font-medium" data-activity="sedentary">
+                        🛋️ <strong>Sédentaire</strong><br><span class="text-xs opacity-70">0-1 séance/sem</span>
+                    </button>
+                    <button class="activity-btn px-3 py-2.5 rounded-lg border-2 text-sm font-medium" data-activity="light">
+                        🚶 <strong>Léger</strong><br><span class="text-xs opacity-70">2-3 séances/sem</span>
+                    </button>
+                    <button class="activity-btn active px-3 py-2.5 rounded-lg border-2 text-sm font-medium" data-activity="moderate">
+                        🏃 <strong>Modéré</strong><br><span class="text-xs opacity-70">4-5 séances/sem</span>
+                    </button>
+                    <button class="activity-btn px-3 py-2.5 rounded-lg border-2 text-sm font-medium" data-activity="active">
+                        💪 <strong>Actif</strong><br><span class="text-xs opacity-70">6-7 séances/sem</span>
+                    </button>
+                    <button class="activity-btn px-3 py-2.5 rounded-lg border-2 text-sm font-medium" data-activity="athlete">
+                        🏆 <strong>Athlète</strong><br><span class="text-xs opacity-70">2×/jour</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="mb-5">
+                <label class="form-label">Objectif</label>
+                <div class="grid grid-cols-3 gap-2">
+                    <button class="goal-btn px-3 py-3 rounded-lg border-2 text-sm font-medium" data-goal="cut">
+                        🔥 <strong>Perdre</strong><br><span class="text-xs opacity-70">-15%</span>
+                    </button>
+                    <button class="goal-btn active px-3 py-3 rounded-lg border-2 text-sm font-medium" data-goal="maintain">
+                        ⚖️ <strong>Maintien</strong><br><span class="text-xs opacity-70">±0%</span>
+                    </button>
+                    <button class="goal-btn px-3 py-3 rounded-lg border-2 text-sm font-medium" data-goal="bulk">
+                        💪 <strong>Masser</strong><br><span class="text-xs opacity-70">+15%</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Résultat en direct -->
+            <div class="gradient-bg text-white rounded-xl p-5 mb-5">
+                <div class="flex justify-between items-center flex-wrap gap-3">
+                    <div>
+                        <p class="text-xs opacity-80 uppercase tracking-wide font-semibold">Votre TDEE estimé</p>
+                        <p class="text-3xl font-extrabold"><span id="live-bmr">—</span> <span class="text-base font-semibold opacity-80">kcal/jour</span></p>
+                        <p class="text-xs opacity-80" id="live-detail">Remplissez votre profil pour voir le résultat</p>
+                    </div>
+                    <div class="bg-white/15 rounded-xl px-4 py-3 text-center">
+                        <p class="text-xs opacity-80">Objectif ajusté</p>
+                        <p class="text-2xl font-extrabold"><span id="live-target">—</span> <span class="text-xs opacity-80">kcal</span></p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex gap-3">
+                <button id="btn-save-profile" class="btn-primary flex-1 text-white px-6 py-3 rounded-xl font-bold">
+                    <i class="fas fa-check mr-2"></i>Valider mon profil
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== MODAL RECETTE ========== -->
+    <div id="recipe-modal" class="modal">
+        <div class="modal-content">
+            <div class="flex justify-between items-center mb-4">
+                <h2 id="modal-title" class="text-2xl font-bold"></h2>
+                <button id="btn-close-recipe" class="text-slate-400 hover:text-slate-600 text-2xl">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div id="modal-content"></div>
+        </div>
+    </div>
+
+    <!-- ========== MODAL PREFERENCES ALIMENTAIRES ========== -->
+    <div id="preferences-modal" class="modal">
+        <div class="modal-content">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-2xl font-bold">
+                    <i class="fas fa-sliders-h text-purple-600 mr-2"></i>Préférences Alimentaires
+                </h2>
+                <button id="btn-close-prefs" class="text-slate-400 hover:text-slate-600 text-2xl">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="space-y-6">
+                <div>
+                    <h3 class="font-bold mb-3">Régimes préférés</h3>
+                    <div class="grid grid-cols-2 gap-3">
+                        <button class="preference-toggle px-4 py-3 rounded-lg border-2 border-gray-300 font-medium" data-pref="vegetarian">🥬 Végétarien</button>
+                        <button class="preference-toggle px-4 py-3 rounded-lg border-2 border-gray-300 font-medium" data-pref="glutenFree">🌾 Sans gluten</button>
+                        <button class="preference-toggle px-4 py-3 rounded-lg border-2 border-gray-300 font-medium" data-pref="dairyFree">🥛 Sans lactose</button>
+                        <button class="preference-toggle px-4 py-3 rounded-lg border-2 border-gray-300 font-medium" data-pref="highProtein">💪 Riche en protéines</button>
+                    </div>
+                </div>
+                <div>
+                    <h3 class="font-bold mb-3">Ingrédients à éviter</h3>
+                    <div class="grid grid-cols-2 gap-3">
+                        <button class="preference-toggle px-4 py-3 rounded-lg border-2 border-gray-300 font-medium" data-avoid="mushrooms">🍄 Champignons</button>
+                        <button class="preference-toggle px-4 py-3 rounded-lg border-2 border-gray-300 font-medium" data-avoid="fish">🐟 Poisson</button>
+                        <button class="preference-toggle px-4 py-3 rounded-lg border-2 border-gray-300 font-medium" data-avoid="nuts">🥜 Noix</button>
+                        <button class="preference-toggle px-4 py-3 rounded-lg border-2 border-gray-300 font-medium" data-avoid="seafood">🦐 Fruits de mer</button>
+                    </div>
+                </div>
+                <button id="btn-save-prefs" class="btn-primary w-full text-white px-6 py-3 rounded-xl font-bold">
+                    <i class="fas fa-save mr-2"></i>Enregistrer
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    'use strict';
+
+    /* =====================================================
+       1. DONNÉES DES RECETTES (+ fibres ajoutées)
+    ===================================================== */
+    const RECIPES = {
+        breakfast: [
+            { name: "Porridge Protéiné aux Fruits", prepTime: 5, cookTime: 10, ingredients: [{ item: "flocons d'avoine", quantity: "80g", category: "Céréales", cost: 0.50 }, { item: "lait d'amande", quantity: "250ml", category: "Produits laitiers", cost: 0.80 }, { item: "banane", quantity: "1", category: "Fruits", cost: 0.30 }, { item: "myrtilles", quantity: "50g", category: "Fruits", cost: 0.70 }, { item: "protéine whey", quantity: "30g", category: "Compléments", cost: 1.20 }, { item: "miel", quantity: "1 c.à.s", category: "Épicerie", cost: 0.20 }], steps: ["Faire chauffer le lait d'amande dans une casserole", "Ajouter les flocons d'avoine et cuire 5 minutes en remuant", "Incorporer la protéine whey hors du feu", "Garnir avec la banane tranchée et les myrtilles", "Ajouter un filet de miel avant de servir"], macros: { calories: 450, protein: 35, carbs: 55, fat: 12, fiber: 9 }, emoji: "🥣", tags: ['highProtein', 'dairyFree', 'highFiber'] },
+            { name: "Omelette aux Légumes", prepTime: 10, cookTime: 8, ingredients: [{ item: "œufs", quantity: "3", category: "Produits laitiers", cost: 1.20 }, { item: "épinards frais", quantity: "50g", category: "Légumes", cost: 0.60 }, { item: "tomates", quantity: "1", category: "Légumes", cost: 0.40 }, { item: "fromage râpé", quantity: "30g", category: "Produits laitiers", cost: 0.80 }, { item: "pain sans gluten", quantity: "1 tranche", category: "Céréales", cost: 0.60 }], steps: ["Battre les œufs dans un bol", "Faire revenir les épinards et tomates dans une poêle", "Verser les œufs battus sur les légumes", "Ajouter le fromage râpé", "Cuire 3-4 minutes et servir avec le pain"], macros: { calories: 380, protein: 28, carbs: 15, fat: 22, fiber: 4 }, emoji: "🍳", tags: ['vegetarian', 'glutenFree', 'highProtein', 'lowCalorie'] },
+            { name: "Smoothie Bowl Énergétique", prepTime: 10, cookTime: 0, ingredients: [{ item: "banane congelée", quantity: "1", category: "Fruits", cost: 0.30 }, { item: "baies mélangées", quantity: "100g", category: "Fruits", cost: 1.00 }, { item: "yaourt grec", quantity: "150g", category: "Produits laitiers", cost: 1.20 }, { item: "granola sans gluten", quantity: "40g", category: "Céréales", cost: 0.80 }, { item: "graines de chia", quantity: "1 c.à.s", category: "Épicerie", cost: 0.30 }], steps: ["Mixer la banane, les baies et le yaourt jusqu'à obtenir une texture lisse", "Verser dans un bol", "Garnir avec le granola et les graines de chia", "Ajouter quelques fruits frais si désiré"], macros: { calories: 420, protein: 20, carbs: 65, fat: 10, fiber: 8 }, emoji: "🍓", tags: ['vegetarian', 'glutenFree', 'quick', 'highFiber'] },
+            { name: "Tartine Avocat et Œuf Poché", prepTime: 8, cookTime: 5, ingredients: [{ item: "pain complet", quantity: "2 tranches", category: "Céréales", cost: 0.60 }, { item: "avocat", quantity: "1", category: "Fruits", cost: 1.20 }, { item: "œufs", quantity: "2", category: "Produits laitiers", cost: 0.80 }, { item: "citron", quantity: "1/2", category: "Fruits", cost: 0.20 }, { item: "piment rouge", quantity: "1 pincée", category: "Épices", cost: 0.10 }], steps: ["Toaster le pain", "Écraser l'avocat avec le citron et le piment", "Faire pocher les œufs dans l'eau frémissante", "Tartiner le pain avec l'avocat", "Déposer les œufs pochés et servir"], macros: { calories: 480, protein: 22, carbs: 40, fat: 26, fiber: 10 }, emoji: "🥑", tags: ['vegetarian', 'highProtein', 'highFiber'] }
+        ],
+        lunch: [
+            { name: "Poulet Grillé et Quinoa", prepTime: 10, cookTime: 20, ingredients: [{ item: "poitrine de poulet", quantity: "150g", category: "Viandes", cost: 3.50 }, { item: "quinoa", quantity: "80g", category: "Céréales", cost: 0.90 }, { item: "brocoli", quantity: "100g", category: "Légumes", cost: 0.80 }, { item: "carottes", quantity: "1", category: "Légumes", cost: 0.30 }, { item: "huile d'olive", quantity: "1 c.à.s", category: "Épicerie", cost: 0.20 }], steps: ["Cuire le quinoa selon les instructions du paquet", "Assaisonner le poulet et le griller 6-7 minutes de chaque côté", "Faire cuire le brocoli à la vapeur 5 minutes", "Couper les carottes en bâtonnets", "Assembler le tout et arroser d'huile d'olive"], macros: { calories: 520, protein: 45, carbs: 45, fat: 15, fiber: 8 }, emoji: "🍗", tags: ['glutenFree', 'dairyFree', 'highProtein', 'highFiber'] },
+            { name: "Salade de Thon Méditerranéenne", prepTime: 15, cookTime: 0, ingredients: [{ item: "thon en conserve", quantity: "1 boîte", category: "Conserves", cost: 2.00 }, { item: "tomates cerises", quantity: "100g", category: "Légumes", cost: 0.80 }, { item: "concombre", quantity: "1/2", category: "Légumes", cost: 0.40 }, { item: "olives noires", quantity: "30g", category: "Conserves", cost: 0.60 }, { item: "feta", quantity: "50g", category: "Produits laitiers", cost: 1.00 }, { item: "pain sans gluten", quantity: "1 tranche", category: "Céréales", cost: 0.60 }], steps: ["Égoutter le thon", "Couper les tomates et le concombre", "Mélanger tous les légumes avec le thon", "Ajouter les olives et la feta émiettée", "Servir avec le pain"], macros: { calories: 450, protein: 38, carbs: 25, fat: 18, fiber: 5 }, emoji: "🥗", tags: ['glutenFree', 'highProtein', 'lowCalorie'] },
+            { name: "Wrap de Dinde et Avocat", prepTime: 10, cookTime: 0, ingredients: [{ item: "tortilla complète", quantity: "1", category: "Céréales", cost: 0.80 }, { item: "dinde fumée", quantity: "100g", category: "Viandes", cost: 2.50 }, { item: "avocat", quantity: "1/2", category: "Fruits", cost: 0.80 }, { item: "laitue", quantity: "50g", category: "Légumes", cost: 0.30 }, { item: "yaourt nature", quantity: "2 c.à.s", category: "Produits laitiers", cost: 0.40 }], steps: ["Étaler le yaourt sur la tortilla", "Disposer les tranches de dinde", "Ajouter l'avocat tranché et la laitue", "Rouler fermement le wrap", "Couper en diagonale et servir"], macros: { calories: 480, protein: 32, carbs: 35, fat: 22, fiber: 6 }, emoji: "🌯", tags: ['highProtein', 'quick'] },
+            { name: "Bowl Végétarien aux Pois Chiches", prepTime: 15, cookTime: 10, ingredients: [{ item: "pois chiches", quantity: "150g", category: "Légumineuses", cost: 1.20 }, { item: "riz basmati", quantity: "80g", category: "Céréales", cost: 0.50 }, { item: "épinards", quantity: "100g", category: "Légumes", cost: 0.80 }, { item: "avocat", quantity: "1/2", category: "Fruits", cost: 0.80 }, { item: "tahini", quantity: "2 c.à.s", category: "Épicerie", cost: 0.60 }], steps: ["Cuire le riz", "Rôtir les pois chiches avec des épices", "Faire revenir les épinards", "Assembler le bowl avec l'avocat", "Arroser de tahini et servir"], macros: { calories: 510, protein: 22, carbs: 60, fat: 20, fiber: 12 }, emoji: "🥙", tags: ['vegetarian', 'glutenFree', 'dairyFree', 'highFiber'] },
+            { name: "Salade de Lentilles et Feta", prepTime: 12, cookTime: 0, ingredients: [{ item: "lentilles vertes cuites", quantity: "150g", category: "Légumineuses", cost: 1.00 }, { item: "tomates cerises", quantity: "100g", category: "Légumes", cost: 0.80 }, { item: "concombre", quantity: "1/2", category: "Légumes", cost: 0.40 }, { item: "feta", quantity: "40g", category: "Produits laitiers", cost: 0.80 }, { item: "persil", quantity: "1 poignée", category: "Légumes", cost: 0.30 }], steps: ["Mélanger les lentilles avec les légumes coupés", "Émietter la feta par-dessus", "Ajouter le persil haché", "Assaisonner avec huile d'olive et citron"], macros: { calories: 420, protein: 25, carbs: 45, fat: 16, fiber: 14 }, emoji: "🥬", tags: ['vegetarian', 'glutenFree', 'highFiber', 'lowCalorie'] }
+        ],
+        dinner: [
+            { name: "Saumon et Légumes Rôtis", prepTime: 15, cookTime: 25, ingredients: [{ item: "filet de saumon", quantity: "150g", category: "Poissons", cost: 4.50 }, { item: "patates douces", quantity: "150g", category: "Légumes", cost: 0.80 }, { item: "asperges", quantity: "100g", category: "Légumes", cost: 1.20 }, { item: "citron", quantity: "1/2", category: "Fruits", cost: 0.20 }, { item: "huile d'olive", quantity: "1 c.à.s", category: "Épicerie", cost: 0.20 }], steps: ["Préchauffer le four à 200°C", "Couper les patates douces en cubes et les asperges", "Arroser de l'huile d'olive et enfourner 20 minutes", "Assaisonner le saumon et le cuire 12-15 minutes", "Servir avec un filet de citron"], macros: { calories: 550, protein: 42, carbs: 35, fat: 25, fiber: 7 }, emoji: "🐟", tags: ['glutenFree', 'dairyFree', 'highProtein', 'highFiber'] },
+            { name: "Pâtes Complètes au Poulet", prepTime: 10, cookTime: 15, ingredients: [{ item: "pâtes complètes", quantity: "80g", category: "Céréales", cost: 0.70 }, { item: "poitrine de poulet", quantity: "120g", category: "Viandes", cost: 2.80 }, { item: "sauce tomate", quantity: "100ml", category: "Conserves", cost: 0.60 }, { item: "courgettes", quantity: "1", category: "Légumes", cost: 0.50 }, { item: "parmesan", quantity: "20g", category: "Produits laitiers", cost: 0.80 }], steps: ["Cuire les pâtes selon les instructions", "Faire revenir le poulet coupé en dés", "Ajouter les courgettes tranchées", "Incorporer la sauce tomate et laisser mijoter", "Mélanger avec les pâtes et saupoudrer de parmesan"], macros: { calories: 580, protein: 40, carbs: 60, fat: 18, fiber: 6 }, emoji: "🍝", tags: ['highProtein'] },
+            { name: "Bowl de Bœuf et Riz", prepTime: 10, cookTime: 20, ingredients: [{ item: "bœuf haché maigre", quantity: "120g", category: "Viandes", cost: 3.20 }, { item: "riz basmati", quantity: "80g", category: "Céréales", cost: 0.50 }, { item: "poivrons", quantity: "1", category: "Légumes", cost: 0.70 }, { item: "oignon", quantity: "1/2", category: "Légumes", cost: 0.20 }, { item: "sauce soja", quantity: "1 c.à.s", category: "Épicerie", cost: 0.15 }], steps: ["Cuire le riz selon les instructions", "Faire revenir l'oignon et les poivrons", "Ajouter le bœuf haché et cuire 5-6 minutes", "Assaisonner avec la sauce soja", "Servir le tout sur le riz"], macros: { calories: 540, protein: 38, carbs: 50, fat: 20, fiber: 5 }, emoji: "🍚", tags: ['dairyFree', 'highProtein'] },
+            { name: "Curry de Légumes et Lentilles", prepTime: 15, cookTime: 25, ingredients: [{ item: "lentilles corail", quantity: "100g", category: "Légumineuses", cost: 1.00 }, { item: "lait de coco", quantity: "200ml", category: "Conserves", cost: 1.50 }, { item: "épinards", quantity: "100g", category: "Légumes", cost: 0.80 }, { item: "tomates", quantity: "2", category: "Légumes", cost: 0.60 }, { item: "riz basmati", quantity: "80g", category: "Céréales", cost: 0.50 }, { item: "curry en poudre", quantity: "2 c.à.c", category: "Épices", cost: 0.30 }], steps: ["Cuire les lentilles 15 minutes", "Faire revenir les tomates avec le curry", "Ajouter le lait de coco et les lentilles", "Incorporer les épinards et laisser mijoter", "Servir sur le riz"], macros: { calories: 520, protein: 28, carbs: 65, fat: 15, fiber: 12 }, emoji: "🍛", tags: ['vegetarian', 'glutenFree', 'dairyFree', 'highFiber'] },
+            { name: "Poisson Blanc, Riz et Haricots Verts", prepTime: 10, cookTime: 18, ingredients: [{ item: "filet de colin", quantity: "150g", category: "Poissons", cost: 3.80 }, { item: "riz basmati", quantity: "70g", category: "Céréales", cost: 0.50 }, { item: "haricots verts", quantity: "120g", category: "Légumes", cost: 0.80 }, { item: "citron", quantity: "1/2", category: "Fruits", cost: 0.20 }], steps: ["Cuire le riz", "Cuire les haricots verts à la vapeur", "Cuire le poisson à la poêle 4-5 min par côté", "Servir avec le citron"], macros: { calories: 460, protein: 40, carbs: 45, fat: 12, fiber: 6 }, emoji: "🐠", tags: ['glutenFree', 'dairyFree', 'highProtein', 'lowCalorie'] }
+        ],
+        snack: [
+            { name: "Pomme et Beurre d'Arachide", prepTime: 5, cookTime: 0, ingredients: [{ item: "pomme", quantity: "1", category: "Fruits", cost: 0.50 }, { item: "beurre d'arachide", quantity: "2 c.à.s", category: "Épicerie", cost: 0.60 }], steps: ["Laver et couper la pomme en tranches", "Tartiner de beurre d'arachide", "Déguster immédiatement"], macros: { calories: 250, protein: 8, carbs: 30, fat: 14, fiber: 6 }, emoji: "🍎", tags: ['vegetarian', 'glutenFree', 'dairyFree', 'quick', 'highFiber'] },
+            { name: "Yaourt Grec et Noix", prepTime: 3, cookTime: 0, ingredients: [{ item: "yaourt grec", quantity: "150g", category: "Produits laitiers", cost: 1.20 }, { item: "amandes", quantity: "20g", category: "Épicerie", cost: 0.50 }, { item: "miel", quantity: "1 c.à.c", category: "Épicerie", cost: 0.10 }], steps: ["Verser le yaourt dans un bol", "Ajouter les amandes", "Arroser de miel", "Mélanger et déguster"], macros: { calories: 220, protein: 15, carbs: 18, fat: 10, fiber: 3 }, emoji: "🥛", tags: ['vegetarian', 'glutenFree', 'quick'] },
+            { name: "Houmous et Bâtonnets de Carottes", prepTime: 5, cookTime: 0, ingredients: [{ item: "houmous", quantity: "100g", category: "Épicerie", cost: 1.00 }, { item: "carottes", quantity: "2", category: "Légumes", cost: 0.40 }, { item: "concombre", quantity: "1/2", category: "Légumes", cost: 0.30 }], steps: ["Couper les carottes et le concombre en bâtonnets", "Servir avec le houmous", "Déguster"], macros: { calories: 180, protein: 8, carbs: 20, fat: 8, fiber: 7 }, emoji: "🥕", tags: ['vegetarian', 'glutenFree', 'dairyFree', 'lowCalorie', 'quick', 'highFiber'] },
+            { name: "Shake Protéiné Banane", prepTime: 5, cookTime: 0, ingredients: [{ item: "banane", quantity: "1", category: "Fruits", cost: 0.30 }, { item: "lait d'amande", quantity: "250ml", category: "Produits laitiers", cost: 0.80 }, { item: "protéine whey", quantity: "30g", category: "Compléments", cost: 1.20 }], steps: ["Mixer tous les ingrédients", "Verser dans un verre", "Déguster immédiatement"], macros: { calories: 280, protein: 30, carbs: 25, fat: 6, fiber: 4 }, emoji: "🥤", tags: ['glutenFree', 'dairyFree', 'highProtein', 'quick'] },
+            { name: "Barre de Fruits et Graines", prepTime: 0, cookTime: 0, ingredients: [{ item: "barre granola", quantity: "1", category: "Épicerie", cost: 0.90 }, { item: "amandes", quantity: "10g", category: "Épicerie", cost: 0.30 }, { item: "orange", quantity: "1", category: "Fruits", cost: 0.50 }], steps: ["Déguster la barre"], macros: { calories: 240, protein: 10, carbs: 30, fat: 9, fiber: 8 }, emoji: "🍊", tags: ['vegetarian', 'quick', 'highFiber'] }
+        ]
+    };
+
+    /* =====================================================
+       2. ÉTAT DE L'APPLICATION
+    ===================================================== */
+    const state = {
+        profile: null,            // { sex, age, height, weight, activity, goal }
+        currentMenu: [],
+        currentTab: 'menu',
+        removedIngredients: {},
+        favorites: {},
+        activeFilters: { all: true },
+        currentWeekOffset: 0,
+        savedMenus: [],
+        preferences: { diets: [], avoid: [] },
+        darkMode: false,
+        targets: { calories: 2200, protein: 120, carbs: 250, fat: 70, fiber: 35 },
+        boostFiber: false        // forcer les recettes riches en fibres
+    };
+
+    // --- Constantes TDEE ---
+    const ACTIVITY_FACTORS = { sedentary: 1.2, light: 1.375, moderate: 1.55, active: 1.725, athlete: 1.9 };
+    const GOAL_FACTORS = { cut: 0.85, maintain: 1.0, bulk: 1.15 };
+    const ACTIVITY_LABELS = {
+        sedentary: 'Sédentaire', light: 'Léger (2-3/sem)', moderate: 'Modéré (4-5/sem)',
+        active: 'Actif (6-7/sem)', athlete: 'Athlète (2×/jour)'
+    };
+    const GOAL_LABELS = { cut: 'Perte de poids', maintain: 'Maintien', bulk: 'Prise de masse' };
+    const FIBER_MIN = 30, FIBER_MAX = 40;  // recommandation fibres
+
+    const DAYS = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
+
+    /* =====================================================
+       3. PERSISTANCE (localStorage)
+    ===================================================== */
+    const store = {
+        get(key, fallback) {
+            try { return JSON.parse(localStorage.getItem('fitmenu_' + key)) ?? fallback; }
+            catch (e) { return fallback; }
+        },
+        set(key, value) {
+            try { localStorage.setItem('fitmenu_' + key, JSON.stringify(value)); } catch (e) {}
+        }
+    };
+
+    function loadState() {
+        state.profile = store.get('profile', null);
+        state.favorites = store.get('favorites', {});
+        state.savedMenus = store.get('saved', []);
+        state.preferences = { diets: store.get('diets', []), avoid: store.get('avoid', []) };
+        state.darkMode = store.get('dark', false);
+    }
+
+    function saveProfile() {
+        store.set('profile', state.profile);
+        computeTargets();
+        updateTdeeBanner();
+    }
+
+    function saveFavorites() { store.set('favorites', state.favorites); }
+    function persistPreferences() { store.set('diets', state.preferences.diets); store.set('avoid', state.preferences.avoid); }
+    function saveSavedMenus() { store.set('saved', state.savedMenus); }
+
+    /* =====================================================
+       4. CALCUL TDEE (formule de Harris-Benedict révisée)
+    ===================================================== */
+    function calculateBMR(profile) {
+        const { sex, age, height, weight } = profile;
+        if (sex === 'male') {
+            return 88.362 + (13.397 * weight) + (4.799 * height) - (5.677 * age);
+        }
+        return 447.593 + (9.247 * weight) + (3.098 * height) - (4.330 * age);
+    }
+
+    function calculateTDEE(profile) {
+        const bmr = calculateBMR(profile);
+        return bmr * (ACTIVITY_FACTORS[profile.activity] || 1.2);
+    }
+
+    /* Répartition des macronutriments selon les % standard fitness :
+       - Protéines : 30% des calories
+       - Glucides : 40%
+       - Lipides : 30%
+       - Fibres : 30g minimum (objectif 35g) */
+    function computeTargets() {
+        if (!state.profile) {
+            state.targets = { calories: 2200, protein: 120, carbs: 250, fat: 70, fiber: 35 };
+            return;
+        }
+        const tdee = calculateTDEE(state.profile);
+        const calories = Math.round(tdee * (GOAL_FACTORS[state.profile.goal] || 1));
+        const protein = Math.round((calories * 0.30) / 4);   // 4 kcal/g
+        const carbs = Math.round((calories * 0.40) / 4);
+        const fat = Math.round((calories * 0.30) / 9);       // 9 kcal/g
+        const fiber = FIBER_MAX;                              // viser le haut de la fourchette
+
+        state.targets = { calories, protein, carbs, fat, fiber };
+    }
+
+    function updateTdeeBanner() {
+        const banner = document.getElementById('tdee-banner');
+        if (!state.profile) {
+            banner.classList.add('hidden');
+            return;
+        }
+        banner.classList.remove('hidden');
+
+        const tdee = Math.round(calculateTDEE(state.profile));
+        const target = state.targets.calories;
+
+        document.getElementById('tdee-total').textContent = target.toLocaleString('fr-CA') + ' kcal';
+        document.getElementById('tdee-detail').textContent =
+            'BMR ' + Math.round(calculateBMR(state.profile)).toLocaleString('fr-CA') +
+            ' × ' + state.profile.age + ' ans, ' + state.profile.height + 'cm, ' +
+            state.profile.weight + 'kg · ' + ACTIVITY_LABELS[state.profile.activity] +
+            ' · ' + GOAL_LABELS[state.profile.goal];
+
+        document.getElementById('stat-protein').textContent = state.targets.protein + 'g';
+        document.getElementById('stat-carbs').textContent = state.targets.carbs + 'g';
+        document.getElementById('stat-fat').textContent = state.targets.fat + 'g';
+        document.getElementById('stat-fiber').textContent = state.targets.fiber + 'g';
+
+        document.getElementById('targets-label').textContent =
+            state.targets.calories + ' kcal · ' + state.targets.protein + 'g prot · ' +
+            state.targets.carbs + 'g glu · ' + state.targets.fat + 'g lip' +
+            ' · ' + state.targets.fiber + 'g fibres';
+    }
+
+    /* =====================================================
+       5. GÉNÉRATION DU MENU
+    ===================================================== */
+    function filterRecipes(list, tag) {
+        if (tag === 'all' || !tag) return list;
+        const filtered = list.filter(r => r.tags.includes(tag));
+        return filtered.length > 0 ? filtered : list;
+    }
+
+    function pick(list, used, excludeTags) {
+        // Exclure les recettes déjà utilisées (diversité) et celles à éviter
+        let pool = list.filter(r => !used.includes(r.name) && !r.tags.some(t => (excludeTags || []).includes(t)));
+        if (pool.length === 0) pool = list.filter(r => !r.tags.some(t => (excludeTags || []).includes(t)));
+        if (state.boostFiber) {
+            const fiberPool = pool.filter(r => r.macros.fiber >= 6);
+            if (fiberPool.length > 0) pool = fiberPool;
+        }
+        return pool[Math.floor(Math.random() * pool.length)];
+    }
+
+    function generateMenu() {
+        const allFilters = Object.keys(state.activeFilters).filter(f => f !== 'all');
+        const excludeTags = state.preferences.avoid;
+
+        const sources = {};
+        for (const cat of Object.keys(RECIPES)) {
+            let list = RECIPES[cat];
+            for (const f of allFilters) list = filterRecipes(list, f);
+            sources[cat] = list.length > 0 ? list : RECIPES[cat];
+        }
+
+        state.currentMenu = [];
+        const used = { breakfast: [], lunch: [], dinner: [], snack: [] };
+
+        for (const day of DAYS) {
+            const entry = { day };
+            for (const cat of Object.keys(sources)) {
+                const pick1 = pick(sources[cat], used[cat], excludeTags);
+                if (pick1) {
+                    used[cat].push(pick1.name);
+                    entry[cat] = pick1;
+                }
+            }
+            state.currentMenu.push(entry);
+        }
+
+        renderEverything();
+        checkFiber();
+        showToast('Menu généré selon votre TDEE !', 'success');
+    }
+
+    /* Détection si fibres insuffisantes */
+    function checkFiber() {
+        const totals = sumMenuMacros();
+        const avgFiber = Math.round(totals.fiber / 7);
+        const warning = document.getElementById('fiber-warning');
+        if (avgFiber < FIBER_MIN && state.profile) {
+            warning.classList.remove('hidden');
+        } else {
+            warning.classList.add('hidden');
+        }
+    }
+
+    function boostFiberMenu() {
+        state.boostFiber = true;
+        generateMenu();
+        state.boostFiber = false;
+    }
+
+    /* =====================================================
+       6. RENDU DU MENU
+    ===================================================== */
+    function renderEverything() {
+        renderMenu();
+        renderRecipes();
+        renderShoppingList();
+        calculateDailyCalories();
+    }
+
+    function esc(s) { return String(s).replace(/'/g, "\\'"); }
+
+    function renderMenu() {
+        const container = document.getElementById('menu-container');
+        container.innerHTML = '';
+
+        for (const dayMenu of state.currentMenu) {
+            const dayCalories = dayMenu.breakfast.macros.calories + dayMenu.lunch.macros.calories +
+                dayMenu.dinner.macros.calories + dayMenu.snack.macros.calories;
+            const dayFiber = dayMenu.breakfast.macros.fiber + dayMenu.lunch.macros.fiber +
+                dayMenu.dinner.macros.fiber + dayMenu.snack.macros.fiber;
+
+            const div = document.createElement('div');
+            div.className = 'card card-hover p-4';
+            div.innerHTML = `
+                <div class="flex justify-between items-center mb-3 flex-wrap gap-2">
+                    <h3 class="text-xl font-bold text-purple-600">${dayMenu.day}</h3>
+                    <div class="flex items-center gap-3 flex-wrap">
+                        <span class="gradient-orange text-white px-3 py-1 rounded-full text-xs font-semibold">
+                            <i class="fas fa-clock mr-1"></i>${getTotalTime(dayMenu)} min
+                        </span>
+                        <span class="text-sm font-semibold text-slate-500">
+                            <i class="fas fa-fire text-orange-500 mr-1"></i>${dayCalories} kcal
+                        </span>
+                        <span class="text-xs font-medium text-green-600">
+                            <i class="fas fa-leaf mr-1"></i>${dayFiber}g fibres
+                        </span>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    ${renderMealCard(dayMenu.breakfast, 'Petit-déj', 'bg-blue-50', 'fa-sun', 'text-yellow-500')}
+                    ${renderMealCard(dayMenu.lunch, 'Déjeuner', 'bg-green-50', 'fa-cloud-sun', 'text-orange-500')}
+                    ${renderMealCard(dayMenu.dinner, 'Dîner', 'bg-purple-50', 'fa-moon', 'text-purple-500')}
+                    ${renderMealCard(dayMenu.snack, 'Collation', 'bg-pink-50', 'fa-apple-alt', 'text-red-500')}
+                </div>`;
+            container.appendChild(div);
+        }
+    }
+
+    function renderMealCard(meal, mealType, bgColor, icon, iconColor) {
+        const isFav = state.favorites[meal.name] ? 'active' : '';
+        const totalTime = meal.prepTime + meal.cookTime;
+        return `
+            <div onclick="showRecipeModal('${esc(meal.name)}')" class="meal-card ${bgColor} rounded-xl p-3 card-hover">
+                <div class="flex items-center justify-between mb-2">
+                    <div class="flex items-center">
+                        <i class="fas ${icon} ${iconColor} mr-2"></i>
+                        <span class="font-semibold text-sm">${mealType}</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs text-slate-500"><i class="fas fa-clock mr-1"></i>${totalTime} min</span>
+                        <span class="text-lg">${meal.emoji}</span>
+                    </div>
+                </div>
+                <p class="text-sm font-medium">${meal.name}</p>
+                <div class="flex justify-between items-center mt-2">
+                    <p class="text-xs text-slate-500">${meal.macros.calories} kcal · 🥬${meal.macros.fiber}g</p>
+                    <button onclick="event.stopPropagation(); toggleFavorite('${esc(meal.name)}')"
+                            class="favorite-btn ${isFav} text-gray-400"><i class="fas fa-heart"></i></button>
+                </div>
+            </div>`;
+    }
+
+    function getTotalTime(dayMenu) {
+        return dayMenu.breakfast.prepTime + dayMenu.breakfast.cookTime +
+               dayMenu.lunch.prepTime + dayMenu.lunch.cookTime +
+               dayMenu.dinner.prepTime + dayMenu.dinner.cookTime +
+               dayMenu.snack.prepTime + dayMenu.snack.cookTime;
+    }
+
+    /* =====================================================
+       7. RECETTES
+    ===================================================== */
+    function findRecipe(name) {
+        for (const cat of Object.values(RECIPES)) {
+            const r = cat.find(x => x.name === name);
+            if (r) return r;
+        }
+        return null;
+    }
+
+    function showRecipeModal(recipeName) {
+        const recipe = findRecipe(recipeName);
+        if (!recipe) return;
+        const isFav = state.favorites[recipe.name];
+        const totalTime = recipe.prepTime + recipe.cookTime;
+
+        document.getElementById('modal-title').textContent = recipe.emoji + ' ' + recipe.name;
+        document.getElementById('modal-content').innerHTML = `
+            <div class="grid grid-cols-2 gap-4 mb-6">
+                <div class="bg-blue-50 rounded-xl p-4 text-center">
+                    <i class="fas fa-clock text-blue-600 text-2xl mb-2"></i>
+                    <p class="text-xs text-slate-500">Préparation</p>
+                    <p class="font-bold text-blue-600 text-lg">${recipe.prepTime} min</p>
+                </div>
+                <div class="bg-orange-50 rounded-xl p-4 text-center">
+                    <i class="fas fa-fire text-orange-600 text-2xl mb-2"></i>
+                    <p class="text-xs text-slate-500">Cuisson${recipe.cookTime === 0 ? ' (aucune)' : ''}</p>
+                    <p class="font-bold text-orange-600 text-lg">${recipe.cookTime} min</p>
+                </div>
+            </div>
+            <div class="grid grid-cols-5 gap-2 mb-6 text-center">
+                <div class="bg-orange-50 rounded p-2"><p class="text-xs">Calories</p><p class="font-bold text-orange-600">${recipe.macros.calories}</p></div>
+                <div class="bg-red-50 rounded p-2"><p class="text-xs">Prot</p><p class="font-bold text-red-600">${recipe.macros.protein}g</p></div>
+                <div class="bg-blue-50 rounded p-2"><p class="text-xs">Glucides</p><p class="font-bold text-blue-600">${recipe.macros.carbs}g</p></div>
+                <div class="bg-yellow-50 rounded p-2"><p class="text-xs">Lipides</p><p class="font-bold text-yellow-600">${recipe.macros.fat}g</p></div>
+                <div class="bg-green-50 rounded p-2"><p class="text-xs">Fibres</p><p class="font-bold text-green-600">${recipe.macros.fiber}g</p></div>
+            </div>
+            <div class="mb-6">
+                <h4 class="font-semibold mb-3"><i class="fas fa-list text-purple-600 mr-2"></i>Ingrédients</h4>
+                <ul class="list-disc list-inside text-sm text-slate-600 dark:text-slate-300 space-y-1">
+                    ${recipe.ingredients.map(i => `<li>${i.quantity} ${i.item}</li>`).join('')}
+                </ul>
+            </div>
+            <div>
+                <h4 class="font-semibold mb-3"><i class="fas fa-tasks text-purple-600 mr-2"></i>Préparation</h4>
+                <div class="space-y-2">
+                    ${recipe.steps.map((s, i) => `
+                        <div class="recipe-step pl-4 py-2">
+                            <span class="text-xs font-bold text-purple-600">Étape ${i + 1}</span>
+                            <p class="text-sm text-slate-600 dark:text-slate-300">${s}</p>
+                        </div>`).join('')}
+                </div>
+            </div>
+            <div class="mt-6 flex gap-3">
+                <button onclick="toggleFavorite('${esc(recipe.name)}')"
+                        class="flex-1 ${isFav ? 'bg-red-500' : 'bg-gray-200 dark:bg-slate-700'} text-white px-4 py-2 rounded-xl font-medium transition-all">
+                    <i class="fas fa-heart mr-2"></i>${isFav ? 'Retirer des favoris' : 'Ajouter aux favoris'}
+                </button>
+            </div>`;
+
+        document.getElementById('recipe-modal').classList.add('active');
+    }
+
+    function closeModal() {
+        document.getElementById('recipe-modal').classList.remove('active');
+    }
+
+    function toggleFavorite(recipeName) {
+        if (state.favorites[recipeName]) {
+            delete state.favorites[recipeName];
+            showToast('Retiré des favoris', 'info');
+        } else {
+            state.favorites[recipeName] = true;
+            showToast('Ajouté aux favoris ❤️', 'success');
+        }
+        saveFavorites();
+        renderEverything();
+    }
+
+    function renderRecipes() {
+        const container = document.getElementById('recipes-container');
+        container.innerHTML = '';
+        const search = (document.getElementById('recipe-search').value || '').toLowerCase();
+
+        const seen = new Set();
+        const allRecipes = [];
+        for (const dayMenu of state.currentMenu) {
+            for (const meal of [dayMenu.breakfast, dayMenu.lunch, dayMenu.dinner, dayMenu.snack]) {
+                if (!seen.has(meal.name)) { seen.add(meal.name); allRecipes.push(meal); }
+            }
+        }
+
+        const filtered = allRecipes.filter(r =>
+            !search || r.name.toLowerCase().includes(search) || r.ingredients.some(i => i.item.toLowerCase().includes(search)));
+
+        if (filtered.length === 0) {
+            container.innerHTML = '<p class="text-center text-slate-400 py-10">Aucune recette trouvée 🔍</p>';
+            return;
+        }
+
+        for (const recipe of filtered) {
+            const div = document.createElement('div');
+            div.className = 'card card-hover p-5';
+            div.innerHTML = `
+                <div class="flex justify-between items-start mb-3">
+                    <h3 class="text-xl font-bold"><span class="text-2xl mr-2">${recipe.emoji}</span>${recipe.name}</h3>
+                    <button onclick="toggleFavorite('${esc(recipe.name)}')"
+                            class="favorite-btn ${state.favorites[recipe.name] ? 'active' : ''} text-xl action-btn">
+                        <i class="fas fa-heart"></i>
+                    </button>
+                </div>
+                <div class="flex flex-wrap gap-2 mb-4">
+                    <span class="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-xs font-semibold"><i class="fas fa-clock mr-1"></i>Prép: ${recipe.prepTime} min</span>
+                    <span class="bg-orange-100 text-orange-700 px-3 py-1 rounded-full text-xs font-semibold"><i class="fas fa-fire mr-1"></i>Cuisson: ${recipe.cookTime} min</span>
+                    <span class="bg-purple-100 text-purple-700 px-3 py-1 rounded-full text-xs font-semibold"><i class="fas fa-hourglass-half mr-1"></i>Total: ${recipe.prepTime + recipe.cookTime} min</span>
+                    <span class="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-semibold"><i class="fas fa-leaf mr-1"></i>${recipe.macros.fiber}g fibres</span>
+                </div>
+                <div class="grid grid-cols-5 gap-2 mb-4 text-center">
+                    <div class="bg-orange-50 rounded p-2"><p class="text-xs text-slate-500">Calories</p><p class="font-bold text-orange-600">${recipe.macros.calories}</p></div>
+                    <div class="bg-red-50 rounded p-2"><p class="text-xs text-slate-500">Protéines</p><p class="font-bold text-red-600">${recipe.macros.protein}g</p></div>
+                    <div class="bg-blue-50 rounded p-2"><p class="text-xs text-slate-500">Glucides</p><p class="font-bold text-blue-600">${recipe.macros.carbs}g</p></div>
+                    <div class="bg-yellow-50 rounded p-2"><p class="text-xs text-slate-500">Lipides</p><p class="font-bold text-yellow-600">${recipe.macros.fat}g</p></div>
+                    <div class="bg-green-50 rounded p-2"><p class="text-xs text-slate-500">Fibres</p><p class="font-bold text-green-600">${recipe.macros.fiber}g</p></div>
+                </div>
+                <div class="mb-4">
+                    <h4 class="font-semibold mb-2"><i class="fas fa-list text-purple-600 mr-2"></i>Ingrédients</h4>
+                    <ul class="list-disc list-inside text-sm text-slate-600 dark:text-slate-300 space-y-1">
+                        ${recipe.ingredients.map(i => `<li>${i.quantity} ${i.item}</li>`).join('')}
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="font-semibold mb-2"><i class="fas fa-tasks text-purple-600 mr-2"></i>Préparation</h4>
+                    <div class="space-y-1">
+                        ${recipe.steps.map((s, i) => `
+                            <div class="recipe-step pl-3 py-1">
+                                <span class="text-xs font-bold text-purple-600">Étape ${i + 1}</span>
+                                <p class="text-sm text-slate-600 dark:text-slate-300">${s}</p>
+                            </div>`).join('')}
+                    </div>
+                </div>`;
+            container.appendChild(div);
+        }
+    }
+
+    /* =====================================================
+       8. LISTE DE COURSES
+    ===================================================== */
+    function renderShoppingList() {
+        const container = document.getElementById('shopping-container');
+        const shoppingList = {};
+        let totalCost = 0;
+
+        for (const dayMenu of state.currentMenu) {
+            for (const meal of [dayMenu.breakfast, dayMenu.lunch, dayMenu.dinner, dayMenu.snack]) {
+                for (const ing of meal.ingredients) {
+                    const key = ing.item + '-' + ing.quantity;
+                    if (state.removedIngredients[key]) continue;
+                    if (!shoppingList[ing.category]) shoppingList[ing.category] = [];
+                    let existing = shoppingList[ing.category].find(x => x.item === ing.item);
+                    if (existing) existing.count++;
+                    else shoppingList[ing.category].push({ item: ing.item, quantity: ing.quantity, key, count: 1 });
+                    totalCost += ing.cost;
+                }
+            }
+        }
+
+        container.innerHTML = '';
+        Object.keys(shoppingList).sort().forEach(category => {
+            const catCard = document.createElement('div');
+            catCard.className = 'card p-4';
+            catCard.innerHTML = `
+                <h3 class="text-lg font-bold text-purple-600 mb-3"><i class="fas fa-tag mr-2"></i>${category}</h3>
+                <ul class="space-y-2">
+                    ${shoppingList[category].map(item => `
+                        <li class="ingredient-item flex items-center justify-between text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-800 p-2 rounded-lg">
+                            <div class="flex items-center">
+                                <i class="fas fa-check-circle text-green-500 mr-2"></i>
+                                <span class="font-medium">${item.item}</span>
+                                <span class="text-slate-400 ml-2">(${item.quantity}${item.count > 1 ? ' x' + item.count : ''})</span>
+                            </div>
+                            <button onclick="removeIngredient('${esc(item.key)}')"
+                                    class="text-red-500 hover:text-red-700 transition-all"><i class="fas fa-times-circle"></i></button>
+                        </li>`).join('')}
+                </ul>`;
+            container.appendChild(catCard);
+        });
+
+        if (Object.keys(shoppingList).length === 0) {
+            container.innerHTML = '<p class="text-center text-slate-400 py-8">Liste vide — générez un menu !</p>';
+        }
+        document.getElementById('total-cost').textContent = totalCost.toFixed(2);
+    }
+
+    function removeIngredient(key) {
+        state.removedIngredients[key] = true;
+        renderShoppingList();
+        showToast('Ingrédient retiré de la liste', 'info');
+    }
+
+    /* =====================================================
+       9. CALCUL DES MOYENNES QUOTIDIENNES
+    ===================================================== */
+    function sumMenuMacros() {
+        const totals = { calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0 };
+        for (const day of state.currentMenu) {
+            for (const meal of [day.breakfast, day.lunch, day.dinner, day.snack]) {
+                totals.calories += meal.macros.calories;
+                totals.protein += meal.macros.protein;
+                totals.carbs += meal.macros.carbs;
+                totals.fat += meal.macros.fat;
+                totals.fiber += meal.macros.fiber;
+            }
+        }
+        return totals;
+    }
+
+    function calculateDailyCalories() {
+        if (state.currentMenu.length === 0) return;
+        const totals = sumMenuMacros();
+        const days = state.currentMenu.length;
+
+        const avg = {
+            calories: Math.round(totals.calories / days),
+            protein: Math.round(totals.protein / days),
+            carbs: Math.round(totals.carbs / days),
+            fat: Math.round(totals.fat / days),
+            fiber: Math.round(totals.fiber / days)
+        };
+
+        setProgress('cal', avg.calories, state.targets.calories, true);
+        setProgress('prot', avg.protein, state.targets.protein, true);
+        setProgress('carb', avg.carbs, state.targets.carbs, true);
+        setProgress('fat', avg.fat, state.targets.fat, true);
+        setProgress('fiber', avg.fiber, state.targets.fiber, true);
+    }
+
+    function setProgress(id, value, target, showTarget) {
+        document.getElementById(id + '-progress').textContent =
+            showTarget ? value.toLocaleString('fr-CA') + ' / ' + target.toLocaleString('fr-CA') : value;
+        document.getElementById(id + '-bar').style.width =
+            Math.min((value / target) * 100, 100).toFixed(1) + '%';
+    }
+
+    /* =====================================================
+       10. NAVIGATION SEMAINES
+    ===================================================== */
+    function updateWeekDisplay() {
+        const today = new Date();
+        const start = new Date(today);
+        start.setDate(today.getDate() - today.getDay() + 1 + (state.currentWeekOffset * 7));
+        const end = new Date(start);
+        end.setDate(start.getDate() + 6);
+
+        const opts = { day: 'numeric', month: 'long' };
+        document.getElementById('week-range').textContent =
+            'Semaine du ' + start.toLocaleDateString('fr-CA', opts) + ' au ' + end.toLocaleDateString('fr-CA', opts);
+        document.getElementById('week-number').textContent = 'Semaine ' + getWeekNumber(start);
+    }
+
+    function getWeekNumber(date) {
+        const firstDay = new Date(date.getFullYear(), 0, 1);
+        const pastDays = (date - firstDay) / 86400000;
+        return Math.ceil((pastDays + firstDay.getDay() + 1) / 7);
+    }
+
+    function previousWeek() { state.currentWeekOffset--; updateWeekDisplay(); generateMenu(); }
+    function nextWeek() { state.currentWeekOffset++; updateWeekDisplay(); generateMenu(); }
+
+    /* =====================================================
+       11. MENUS SAUVEGARDÉS
+    ===================================================== */
+    function saveCurrentMenu() {
+        state.savedMenus.unshift({
+            id: Date.now(),
+            date: new Date().toLocaleDateString('fr-CA'),
+            weekRange: document.getElementById('week-range').textContent,
+            menu: JSON.parse(JSON.stringify(state.currentMenu))
+        });
+        saveSavedMenus();
+        renderSavedMenus();
+        showToast('Menu sauvegardé !', 'success');
+    }
+
+    function renderSavedMenus() {
+        const container = document.getElementById('saved-menus-container');
+
+        if (state.savedMenus.length === 0) {
+            container.innerHTML = `
+                <div class="text-center py-12">
+                    <i class="fas fa-bookmark text-slate-300 text-6xl mb-4"></i>
+                    <p class="text-slate-500 text-lg">Aucun menu sauvegardé</p>
+                    <p class="text-slate-400 text-sm mt-2">Générez un menu puis cliquez sur "Sauvegarder"</p>
+                </div>`;
+            return;
+        }
+
+        container.innerHTML = '';
+        state.savedMenus.forEach((menuData, i) => {
+            const total = menuData.menu.reduce((s, d) =>
+                s + d.breakfast.macros.calories + d.lunch.macros.calories + d.dinner.macros.calories + d.snack.macros.calories, 0);
+            const avg = Math.round(total / 7);
+
+            const div = document.createElement('div');
+            div.className = 'saved-menu-card card p-4';
+            div.innerHTML = `
+                <div class="flex justify-between items-start mb-3">
+                    <div>
+                        <h3 class="font-bold text-lg">${menuData.weekRange}</h3>
+                        <p class="text-sm text-slate-500">Sauvegardé le ${menuData.date}</p>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="loadSavedMenu(${i})" class="bg-purple-100 text-purple-600 px-3 py-1 rounded-lg text-sm font-medium hover:bg-purple-200 transition-all">
+                            <i class="fas fa-eye mr-1"></i>Voir
+                        </button>
+                        <button onclick="deleteSavedMenu(${i})" class="bg-red-100 text-red-600 px-3 py-1 rounded-lg text-sm font-medium hover:bg-red-200 transition-all">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="grid grid-cols-7 gap-2 text-xs">
+                    ${menuData.menu.map(d => `
+                        <div class="text-center">
+                            <p class="font-semibold">${d.day.substring(0, 3)}</p>
+                            <p class="text-slate-500">${d.breakfast.macros.calories + d.lunch.macros.calories + d.dinner.macros.calories + d.snack.macros.calories} kcal</p>
+                        </div>`).join('')}
+                </div>
+                <div class="mt-3 pt-3 border-t border-slate-200 dark:border-slate-700">
+                    <p class="text-sm text-slate-500"><i class="fas fa-fire text-orange-500 mr-1"></i>Moyenne: ${avg} kcal/jour</p>
+                </div>`;
+            container.appendChild(div);
+        });
+    }
+
+    function loadSavedMenu(index) {
+        state.currentMenu = JSON.parse(JSON.stringify(state.savedMenus[index].menu));
+        renderEverything();
+        showTab('menu');
+        showToast('Menu chargé !', 'info');
+    }
+
+    function deleteSavedMenu(index) {
+        if (confirm('Supprimer ce menu ?')) {
+            state.savedMenus.splice(index, 1);
+            saveSavedMenus();
+            renderSavedMenus();
+            showToast('Menu supprimé', 'info');
+        }
+    }
+
+    /* =====================================================
+       12. PROFIL UTILISATEUR (TDEE)
+    ===================================================== */
+    function openProfileModal() {
+        if (state.profile) {
+            document.getElementById('profile-sex').value = state.profile.sex;
+            document.getElementById('profile-age').value = state.profile.age;
+            document.getElementById('profile-height').value = state.profile.height;
+            document.getElementById('profile-weight').value = state.profile.weight;
+
+            document.querySelectorAll('.activity-btn').forEach(b =>
+                b.classList.toggle('active', b.dataset.activity === state.profile.activity));
+            document.querySelectorAll('.goal-btn').forEach(b =>
+                b.classList.toggle('active', b.dataset.goal === state.profile.goal));
+        }
+        document.getElementById('profile-modal').classList.add('active');
+        updateLiveTdee();
+    }
+
+    function closeProfileModal() {
+        document.getElementById('profile-modal').classList.remove('active');
+    }
+
+    function readProfileForm() {
+        return {
+            sex: document.getElementById('profile-sex').value,
+            age: parseInt(document.getElementById('profile-age').value) || 30,
+            height: parseInt(document.getElementById('profile-height').value) || 175,
+            weight: parseInt(document.getElementById('profile-weight').value) || 70,
+            activity: document.querySelector('.activity-btn.active')?.dataset.activity || 'moderate',
+            goal: document.querySelector('.goal-btn.active')?.dataset.goal || 'maintain'
+        };
+    }
+
+    function updateLiveTdee() {
+        const p = readProfileForm();
+        const valid = p.age > 0 && p.height > 0 && p.weight > 0;
+        if (!valid) {
+            document.getElementById('live-bmr').textContent = '—';
+            document.getElementById('live-target').textContent = '—';
+            return;
+        }
+        const bmr = Math.round(calculateBMR(p));
+        const tdee = Math.round(bmr * ACTIVITY_FACTORS[p.activity]);
+        const target = Math.round(tdee * GOAL_FACTORS[p.goal]);
+        document.getElementById('live-bmr').textContent = bmr.toLocaleString('fr-CA');
+        document.getElementById('live-target').textContent = target.toLocaleString('fr-CA');
+        document.getElementById('live-detail').textContent =
+            'BMR ' + bmr.toLocaleString('fr-CA') + ' × ' + ACTIVITY_FACTORS[p.activity] +
+            '(' + ACTIVITY_LABELS[p.activity] + ') + ' + GOAL_LABELS[p.goal];
+    }
+
+    function saveProfileForm() {
+        state.profile = readProfileForm();
+        saveProfile();
+        closeProfileModal();
+        showToast('Profil enregistré ! Calories recalculées 🔥', 'success');
+        // Première visite : montrer l'app
+        document.getElementById('welcome-screen').classList.add('hidden');
+        document.getElementById('main-app').classList.remove('hidden');
+        generateMenu();
+    }
+
+    function resetProfile() {
+        // réservé - permet de reconfigurer après un premier profil
+    }
+
+    /* =====================================================
+       13. FILTRES
+    ===================================================== */
+    function toggleFilter(filter) {
+        if (filter === 'all') {
+            state.activeFilters = { all: true };
+        } else {
+            delete state.activeFilters.all;
+            if (state.activeFilters[filter]) delete state.activeFilters[filter];
+            else state.activeFilters[filter] = true;
+            if (Object.keys(state.activeFilters).length === 0) state.activeFilters.all = true;
+        }
+        updateFilterUI();
+        generateMenu();
+    }
+
+    function updateFilterUI() {
+        document.querySelectorAll('.filter-tag').forEach(tag => {
+            const f = tag.dataset.filter;
+            tag.classList.toggle('active', !!state.activeFilters[f]);
+        });
+    }
+
+    /* =====================================================
+       14. PRÉFÉRENCES ALIMENTAIRES
+    ===================================================== */
+    function showPreferences() { document.getElementById('preferences-modal').classList.add('active'); }
+    function closePreferences() { document.getElementById('preferences-modal').classList.remove('active'); }
+
+    function togglePrefList(key, value) {
+        const list = state.preferences[key];
+        const idx = list.indexOf(value);
+        if (idx > -1) list.splice(idx, 1);
+        else list.push(value);
+        updatePrefUI();
+    }
+
+    function updatePrefUI() {
+        document.querySelectorAll('[data-pref]').forEach(btn =>
+            btn.classList.toggle('active', state.preferences.diets.includes(btn.dataset.pref)));
+        document.querySelectorAll('[data-avoid]').forEach(btn =>
+            btn.classList.toggle('active', state.preferences.avoid.includes(btn.dataset.avoid)));
+        document.querySelectorAll('[data-goal]').forEach(btn =>
+            btn.classList.toggle('active', state.profile && state.profile.goal === btn.dataset.goal));
+    }
+
+    function applyPreferences() {
+        persistPreferences();
+        closePreferences();
+        showToast('Préférences enregistrées !', 'success');
+        generateMenu();
+    }
+
+    /* =====================================================
+       15. EXPORT (PDF & COPIE)
+    ===================================================== */
+    function exportPDF() {
+        try {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+
+            doc.setFontSize(18);
+            doc.text('FitMenu Pro - Menu de la Semaine', 20, 20);
+            doc.setFontSize(10);
+            doc.text(state.profile
+                ? 'Objectif: ' + state.targets.calories + ' kcal/jour (TDEE)'
+                : 'Objectif: ' + state.targets.calories + ' kcal/jour', 20, 28);
+
+            let y = 40;
+            doc.setFontSize(11);
+            for (const dayMenu of state.currentMenu) {
+                if (y > 270) { doc.addPage(); y = 20; }
+                doc.setFont(undefined, 'bold');
+                doc.text(dayMenu.day, 20, y);
+                y += 7;
+                doc.setFont(undefined, 'normal');
+                for (const [label, meal] of [
+                    ['Petit-dejeuner', dayMenu.breakfast], ['Dejeuner', dayMenu.lunch],
+                    ['Diner', dayMenu.dinner], ['Collation', dayMenu.snack]]) {
+                    if (y > 280) { doc.addPage(); y = 20; }
+                    doc.text(`${label}: ${meal.name} (${meal.macros.calories} kcal, ${meal.macros.fiber}g fibres)`, 25, y);
+                    y += 6;
+                }
+                y += 8;
+            }
+            doc.save('FitMenu-Pro-Menu-Hebdomadaire.pdf');
+            showToast('PDF exporté !', 'success');
+        } catch (e) {
+            showToast('Erreur export PDF', 'warning');
+        }
+    }
+
+    function copyToClipboard() {
+        let text = 'FitMenu Pro - Menu de la Semaine\n';
+        text += 'Objectif: ' + state.targets.calories + ' kcal/jour (TDEE)\n\n';
+
+        for (const dayMenu of state.currentMenu) {
+            text += dayMenu.day + '\n';
+            text += '  Petit-dejeuner: ' + dayMenu.breakfast.name + ' (' + dayMenu.breakfast.macros.calories + ' kcal)\n';
+            text += '  Dejeuner: ' + dayMenu.lunch.name + ' (' + dayMenu.lunch.macros.calories + ' kcal)\n';
+            text += '  Diner: ' + dayMenu.dinner.name + ' (' + dayMenu.dinner.macros.calories + ' kcal)\n';
+            text += '  Collation: ' + dayMenu.snack.name + ' (' + dayMenu.snack.macros.calories + ' kcal)\n\n';
+        }
+
+        if (navigator.clipboard) {
+            navigator.clipboard.writeText(text)
+                .then(() => showToast('Menu copié !', 'success'))
+                .catch(() => fallbackCopy(text));
+        } else fallbackCopy(text);
+    }
+
+    function fallbackCopy(text) {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        document.body.appendChild(ta);
+        ta.select();
+        try { document.execCommand('copy'); showToast('Menu copié !', 'success'); }
+        catch (e) { showToast('Erreur de copie', 'warning'); }
+        document.body.removeChild(ta);
+    }
+
+    /* =====================================================
+       16. ONGLETS / NAVIGATION
+    ===================================================== */
+    function showTab(tabName) {
+        state.currentTab = tabName;
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
+        document.getElementById('content-' + tabName).classList.remove('hidden');
+        document.querySelectorAll('.tab').forEach(t => {
+            t.classList.remove('tab-active', 'card');
+        });
+        const activeTab = document.getElementById('tab-' + tabName);
+        activeTab.classList.add('tab-active');
+        document.querySelectorAll('.tab:not(.tab-active)').forEach(t => t.classList.add('card'));
+        // re-render si menu sauvegardé
+        if (tabName === 'saved') renderSavedMenus();
+    }
+
+    /* =====================================================
+       17. MODE SOMBRE
+    ===================================================== */
+    function toggleDarkMode() {
+        state.darkMode = !state.darkMode;
+        document.body.classList.toggle('dark-mode', state.darkMode);
+        store.set('dark', state.darkMode);
+        document.getElementById('dark-mode-icon').className = state.darkMode ? 'fas fa-sun' : 'fas fa-moon';
+        showToast(state.darkMode ? 'Mode sombre activé 🌙' : 'Mode clair activé ☀️', 'info');
+    }
+
+    /* =====================================================
+       18. TOASTS
+    ===================================================== */
+    function showToast(message, type = 'info') {
+        const toast = document.createElement('div');
+        const icons = { success: 'fa-check-circle', info: 'fa-info-circle', warning: 'fa-exclamation-triangle' };
+        toast.className = 'toast ' + type;
+        toast.innerHTML = `<i class="fas ${icons[type] || icons.info} mr-2"></i>${message}`;
+        document.body.appendChild(toast);
+        setTimeout(() => { toast.style.opacity = '0'; toast.style.transition = 'opacity 0.3s'; }, 2500);
+        setTimeout(() => toast.remove(), 2800);
+    }
+
+    /* =====================================================
+       19. INITIALISATION
+    ===================================================== */
+    function init() {
+        loadState();
+
+        // Mode sombre
+        if (state.darkMode) {
+            document.body.classList.add('dark-mode');
+            document.getElementById('dark-mode-icon').className = 'fas fa-sun';
+        }
+
+        // Écrans
+        const hasProfile = !!state.profile;
+        document.getElementById('welcome-screen').classList.toggle('hidden', hasProfile);
+        document.getElementById('main-app').classList.toggle('hidden', !hasProfile);
+
+        // Boutons header
+        document.getElementById('btn-dark-mode').onclick = toggleDarkMode;
+        document.getElementById('btn-profile').onclick = openProfileModal;
+        document.getElementById('btn-config-profile').onclick = openProfileModal;
+
+        // Modale profil
+        document.getElementById('btn-close-profile').onclick = closeProfileModal;
+        document.getElementById('btn-save-profile').onclick = saveProfileForm;
+        document.getElementById('btn-start-profile').onclick = openProfileModal;
+        document.getElementById('profile-age').oninput = updateLiveTdee;
+        document.getElementById('profile-height').oninput = updateLiveTdee;
+        document.getElementById('profile-weight').oninput = updateLiveTdee;
+        document.getElementById('profile-sex').onchange = updateLiveTdee;
+        document.querySelectorAll('.activity-btn').forEach(b => {
+            b.onclick = () => {
+                document.querySelectorAll('.activity-btn').forEach(x => x.classList.remove('active'));
+                b.classList.add('active');
+                updateLiveTdee();
+            };
+        });
+        document.querySelectorAll('.goal-btn').forEach(b => {
+            b.onclick = () => {
+                document.querySelectorAll('.goal-btn').forEach(x => x.classList.remove('active'));
+                b.classList.add('active');
+                updateLiveTdee();
+            };
+        });
+
+        // Modale recette
+        document.getElementById('btn-close-recipe').onclick = closeModal;
+
+        // Onglets
+        ['menu', 'recipes', 'shopping', 'saved'].forEach(name => {
+            document.getElementById('tab-' + name).onclick = () => showTab(name);
+        });
+
+        // Navigation semaine
+        document.getElementById('btn-prev-week').onclick = previousWeek;
+        document.getElementById('btn-next-week').onclick = nextWeek;
+
+        // Actions
+        document.getElementById('btn-regenerate').onclick = generateMenu;
+        document.getElementById('btn-save').onclick = saveCurrentMenu;
+        document.getElementById('btn-pdf').onclick = exportPDF;
+        document.getElementById('btn-copy').onclick = copyToClipboard;
+        document.getElementById('btn-fiber-fix').onclick = boostFiberMenu;
+
+        // Filtres
+        document.querySelectorAll('.filter-tag').forEach(btn => {
+            btn.onclick = () => toggleFilter(btn.dataset.filter);
+        });
+
+        // Recherche recettes
+        document.getElementById('recipe-search').oninput = renderRecipes;
+
+        // Préférences
+        document.getElementById('btn-prefs').onclick = showPreferences;
+        document.getElementById('btn-close-prefs').onclick = closePreferences;
+        document.getElementById('btn-save-prefs').onclick = applyPreferences;
+        document.querySelectorAll('[data-pref]').forEach(b => {
+            b.onclick = () => togglePrefList('diets', b.dataset.pref);
+        });
+        document.querySelectorAll('[data-avoid]').forEach(b => {
+            b.onclick = () => togglePrefList('avoid', b.dataset.avoid);
+        });
+
+        // Bouton préférences est dans l'ancien header - on l'enlève de la barre anneau
+        // (le profil est maintenant le bouton principal)
+
+        // Fermeture modales au clic extérieur
+        window.onclick = (event) => {
+            if (event.target === document.getElementById('recipe-modal')) closeModal();
+            if (event.target === document.getElementById('profile-modal')) closeProfileModal();
+            if (event.target === document.getElementById('preferences-modal')) closePreferences();
+        };
+
+        // Échap pour fermer
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') { closeModal(); closeProfileModal(); closePreferences(); }
+        });
+
+        // Init profil / menu
+        computeTargets();
+        updateTdeeBanner();
+        updatePrefUI();
+        updateWeekDisplay();
+
+        if (hasProfile) {
+            generateMenu();
+        }
+    }
+
+    // Lancement
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
+    }
+    </script>
+</body>
+</html>
